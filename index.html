@@ -21,7 +21,7 @@ textarea{width:100%;min-height:180px;border:2px solid var(--line);border-radius:
 textarea:focus{outline:3px solid rgba(14,124,123,.35);border-color:var(--teal)}
 .samples{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0}
 .chip{border:2px solid var(--line);background:#fff;border-radius:999px;padding:8px 14px;font-weight:600}
-.chip:hover,.chip:focus{border-color:var(--teal);outline:none}
+.chip:hover,.chip:focus{border-color:var(--teal);outline:3px solid rgba(14,124,123,.35);outline-offset:2px}
 .btn{background:var(--teal);color:#fff;border:0;border-radius:12px;padding:13px 22px;font-weight:700;font-size:16px}
 .btn:hover{background:var(--teal-dark)}.btn:focus{outline:3px solid rgba(14,124,123,.35)}
 .btn-secondary{background:#fff;color:var(--teal);border:2px solid var(--teal)}
@@ -203,20 +203,23 @@ function parseLine(raw) {
     if (line.includes(":")) return { kind: "unknown", text: line };
     return { kind: "heading", text: line };
   }
-  // Range pattern: "Name: 240 mg/dL (Reference: less than 200 mg/dL)" or "Name: 38 mg/dL (Reference: 40-60 mg/dL)"
-  const m = line.match(/^(.+?):\s*([\d.]+)\s*([A-Za-z0-9/%^³µ\- ]*?)\s*\(?\s*(?:Reference|Ref)\s*:\s*(.+?)\)?\s*$/i);
+  // Range pattern: "Name: 240 mg/dL (Reference: less than 200 mg/dL)" or "Name: 38 mg/dL (Reference: 40-60 mg/dL)".
+  // Separator may be a colon or a tab (spreadsheet copy-paste). Values may be
+  // negative or comma-grouped ("1,200") — commas are stripped before parsing.
+  const m = line.match(/^(.+?)(?::\s*|\t+\s*)(-?[\d,.]+)\s*([A-Za-z0-9/%^³µ\- ]*?)\s*\(?\s*(?:Reference|Ref)\s*:\s*(.+?)\)?\s*$/i);
   if (m) {
     const name = m[1].trim();
-    const value = parseFloat(m[2]);
+    const value = parseFloat(m[2].replace(/,/g, ""));
     const unit = (m[3] || "").trim();
     const refRaw = m[4].trim();
     let low = null, high = null, refText = refRaw;
-    const rangeM = refRaw.match(/^([\d.]+)\s*[-–—]\s*([\d.]+)/);
-    const ltM = refRaw.match(/^(?:less than|below|under|<)\s*([\d.]+)/i);
-    const gtM = refRaw.match(/^(?:more than|above|over|>)\s*([\d.]+)/i);
-    if (rangeM) { low = parseFloat(rangeM[1]); high = parseFloat(rangeM[2]); }
-    else if (ltM) { high = parseFloat(ltM[1]); }
-    else if (gtM) { low = parseFloat(gtM[1]); }
+    const num = s => parseFloat(s.replace(/,/g, ""));
+    const rangeM = refRaw.match(/^(-?[\d,.]+)\s*[-–—]\s*(-?[\d,.]+)/);
+    const ltM = refRaw.match(/^(?:less than|below|under|<)\s*([\d,.]+)/i);
+    const gtM = refRaw.match(/^(?:more than|above|over|>)\s*([\d,.]+)/i);
+    if (rangeM) { low = num(rangeM[1]); high = num(rangeM[2]); }
+    else if (ltM) { high = num(ltM[1]); }
+    else if (gtM) { low = num(gtM[1]); }
     else return { kind: "unknown", text: line };
     let flag = "in";
     if (low !== null && high !== null) { if (value < low) flag = "below"; else if (value > high) flag = "above"; }
