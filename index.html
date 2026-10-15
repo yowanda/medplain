@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MedPlain — Understand your lab results, in plain language</title>
+<meta name="description" content="Paste a lab result or prescription and get a plain-language explanation of every line, plus questions to ask your doctor. Educational only.">
+<style>
+:root{--teal:#0E7C7B;--teal-dark:#095E5D;--ink:#1B2A2A;--muted:#5A6B6B;--line:#DCE8E7;--bg:#F7FAFA;--card:#fff;--amber:#B97A00;--amber-bg:#FFF6E0;--red:#B3261E;--red-bg:#FDECEA;--green:#1E7A34;--green-bg:#EAF6EC;--radius:16px}
+*{box-sizing:border-box}body{margin:0;font-family:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;color:var(--ink);background:var(--bg);line-height:1.55}
+a{color:var(--teal)}button{font:inherit;cursor:pointer}
+.skip{position:absolute;left:-9999px}.skip:focus{position:static;display:block;padding:8px 14px;background:var(--teal);color:#fff}
+.disclaimer{position:sticky;top:0;z-index:50;background:#FFF3CD;border-bottom:2px solid #E8C547;color:#5A4300;padding:10px 16px;font-size:14px;font-weight:600;text-align:center}
+header{max-width:980px;margin:0 auto;padding:28px 16px 8px}
+h1{font-size:clamp(30px,5vw,44px);line-height:1.15;margin:6px 0}h1 span{color:var(--teal)}
+.lede{font-size:18px;color:var(--muted);max-width:640px}
+main{max-width:980px;margin:0 auto;padding:8px 16px 48px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:20px;box-shadow:0 2px 10px rgba(14,124,123,.06)}
+label{font-weight:700;display:block;margin-bottom:8px}
+textarea{width:100%;min-height:180px;border:2px solid var(--line);border-radius:12px;padding:12px;font:inherit;resize:vertical}
+textarea:focus{outline:3px solid rgba(14,124,123,.35);border-color:var(--teal)}
+.samples{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0}
+.chip{border:2px solid var(--line);background:#fff;border-radius:999px;padding:8px 14px;font-weight:600}
+.chip:hover,.chip:focus{border-color:var(--teal);outline:none}
+.btn{background:var(--teal);color:#fff;border:0;border-radius:12px;padding:13px 22px;font-weight:700;font-size:16px}
+.btn:hover{background:var(--teal-dark)}.btn:focus{outline:3px solid rgba(14,124,123,.35)}
+.btn-secondary{background:#fff;color:var(--teal);border:2px solid var(--teal)}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.badge{display:inline-block;border-radius:999px;padding:4px 10px;font-size:13px;font-weight:700}
+.badge-demo{background:#EAF1F1;color:#335}
+.badge-ai{background:#E3F2E3;color:#145A32}
+.badge-info{background:var(--amber-bg);color:var(--amber)}
+.pill{border-radius:999px;padding:4px 12px;font-size:13px;font-weight:700;white-space:nowrap}
+.pill-in{background:var(--green-bg);color:var(--green)}
+.pill-above{background:var(--red-bg);color:var(--red)}
+.pill-below{background:var(--amber-bg);color:var(--amber)}
+.result-grid{display:grid;gap:14px;margin-top:16px}
+@media(min-width:640px){.result-grid{grid-template-columns:1fr 1fr}}
+.result{border:1px solid var(--line);border-radius:14px;padding:16px;background:#fff}
+.result h3{margin:0 0 4px;font-size:18px}
+.result .val{font-size:22px;font-weight:800}
+.rangebar{height:10px;background:#EAF1F1;border-radius:99px;position:relative;margin:14px 0 6px}
+.rangebar .zone{position:absolute;top:0;bottom:0;background:#BFE5DF;border-radius:99px}
+.rangebar .marker{position:absolute;top:-4px;width:4px;height:18px;background:var(--ink);border-radius:2px}
+.range-labels{display:flex;justify-content:space-between;font-size:12px;color:var(--muted)}
+.mean{margin:10px 0 0}
+.term{background:none;border:0;border-bottom:2px dotted var(--teal);color:var(--teal);font-weight:700;padding:0;cursor:pointer}
+.term:focus{outline:2px solid var(--teal);outline-offset:2px}
+.gloss{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.gloss button{border:1px solid var(--line);background:#fff;border-radius:999px;padding:6px 12px}
+.gloss button:hover{border-color:var(--teal)}
+.def{margin-top:14px;background:#F1F8F8;border:1px solid var(--line);border-radius:12px;padding:14px}
+.def h4{margin:0 0 4px}.def p{margin:0}
+.q{border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin:10px 0;background:#FDFBF3}
+details{border:1px solid var(--line);border-radius:12px;padding:12px 16px;background:#fff;margin-top:10px}
+summary{font-weight:700;cursor:pointer}
+.notdo{border:2px solid var(--red);border-radius:14px;padding:16px;background:#FFF8F7;margin-top:24px}
+.notdo h2{margin-top:0;color:var(--red)}
+.notdo ul{margin:8px 0;padding-left:20px}
+.keybox{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+.keybox input{flex:1;min-width:220px;border:2px solid var(--line);border-radius:10px;padding:10px;font:inherit}
+.muted{color:var(--muted);font-size:14px}
+.skipped{background:#FFF6E0;border:1px dashed var(--amber);border-radius:12px;padding:12px;margin-top:14px}
+footer{max-width:980px;margin:0 auto;padding:0 16px 40px;color:var(--muted);font-size:14px}
+@media print{.disclaimer,.no-print{display:none!important}body{background:#fff}main{max-width:none}}
+@media(max-width:480px){.card{padding:16px}.result .val{font-size:20px}}
+</style>
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<div class="disclaimer" role="note">Educational information only — not medical advice, diagnosis, or treatment. Always talk to your doctor.</div>
+<header>
+<h1>MedPlain <span>— understand your lab results, in plain language.</span></h1>
+<p class="lede">Paste a lab result or prescription. MedPlain explains every line in plain English, shows each value against its typical range, and gives you questions to ask your doctor.</p>
+</header>
+<main id="main">
+<section class="card" aria-label="Paste a lab result">
+<label for="input">Paste your lab result or prescription</label>
+<textarea id="input" placeholder="Example:&#10;Total Cholesterol: 240 mg/dL (Reference: less than 200 mg/dL)&#10;HDL Cholesterol: 38 mg/dL (Reference: 40-60 mg/dL)"></textarea>
+<div class="samples" role="group" aria-label="Sample results">
+<button class="chip" type="button" data-sample="cbc">Sample: Complete Blood Count (CBC)</button>
+<button class="chip" type="button" data-sample="lipid">Sample: Cholesterol / Lipid Panel</button>
+<button class="chip" type="button" data-sample="sugar">Sample: Blood Sugar (HbA1c)</button>
+<button class="chip" type="button" data-sample="rx">Sample: Prescription (Metformin)</button>
+</div>
+<div class="row">
+<button class="btn" id="explain" type="button">Explain in plain language →</button>
+<button class="btn btn-secondary no-print" id="clear" type="button">Clear</button>
+<span class="badge badge-demo" id="modeBadge">Demo parsing · built-in rules</span>
+</div>
+<div class="keybox no-print">
+<label for="geminiKey" class="muted" style="width:100%;margin:0">Optional: Gemini API key for AI explanations (stored in your browser only, never sent anywhere except Google's API)</label>
+<input id="geminiKey" type="password" placeholder="Gemini API key (optional)" autocomplete="off">
+<button class="btn btn-secondary" id="saveKey" type="button">Save key</button>
+<button class="btn btn-secondary" id="dropKey" type="button">Remove key</button>
+</div>
+<p class="muted no-print">Your text never leaves your browser unless you add a Gemini key. With a key, the text is sent to Google's Gemini API for explanation only.</p>
+</section>
+
+<section id="results" class="card" style="margin-top:18px;display:none" aria-live="polite">
+<div class="row" style="justify-content:space-between">
+<h2 style="margin:0">Your result, explained</h2>
+<button class="btn btn-secondary no-print" type="button" onclick="window.print()">Print / Save as PDF</button>
+</div>
+<div id="resultGrid" class="result-grid"></div>
+<div id="skippedBox" class="skipped" style="display:none"></div>
+</section>
+
+<section id="questions" class="card" style="margin-top:18px;display:none" aria-label="Questions for your doctor">
+<h2 style="margin-top:0">3 questions for your doctor</h2>
+<p class="muted">Bring these to your appointment. They are starting points for a conversation — not medical advice.</p>
+<div id="qList"></div>
+<button class="btn btn-secondary" id="copyQ" type="button">Copy questions</button>
+<span id="copyMsg" class="muted" role="status"></span>
+</section>
+
+<section class="card" style="margin-top:18px" aria-label="Medical terms glossary">
+<h2 style="margin-top:0">Plain-language glossary</h2>
+<p class="muted">Tap any term for a plain-English definition. Underlined terms in the results work the same way.</p>
+<div class="gloss" id="glossChips"></div>
+<div id="glossDef" class="def" style="display:none" role="status"></div>
+</section>
+
+<section class="notdo" aria-label="What this app does not do">
+<h2>What this app does NOT do</h2>
+<ul>
+<li>No condition naming — this app never names a condition.</li>
+<li>No treatment advice — it never tells you what medicine to take, change, or stop.</li>
+<li>No emergency guidance — if you feel seriously unwell, seek urgent care or call your local emergency number.</li>
+<li>No replacement for your doctor — lab values are one piece of a much bigger picture only a clinician can put together.</li>
+</ul>
+</section>
+</main>
+<footer>
+<p><strong>MedPlain</strong> — educational information only. Not medical advice, diagnosis, or treatment. Always talk to your doctor.</p>
+</footer>
+<script>
+/* ---------- Data ---------- */
+const SAMPLES = {
+cbc: `Complete Blood Count (CBC)
+Hemoglobin: 13.5 g/dL (Reference: 12.0-15.5 g/dL)
+White Blood Cells: 6.2 x10^9/L (Reference: 4.5-11.0 x10^9/L)
+Platelets: 250 x10^9/L (Reference: 150-400 x10^9/L)
+Hematocrit: 41% (Reference: 36-46%)`,
+lipid: `Lipid Panel (Cholesterol)
+Total Cholesterol: 240 mg/dL (Reference: less than 200 mg/dL)
+HDL Cholesterol: 38 mg/dL (Reference: 40-60 mg/dL)
+LDL Cholesterol: 165 mg/dL (Reference: less than 100 mg/dL)
+Triglycerides: 180 mg/dL (Reference: less than 150 mg/dL)`,
+sugar: `Blood Sugar
+HbA1c: 6.8% (Reference: below 5.7%)
+Fasting Glucose: 128 mg/dL (Reference: 70-99 mg/dL)`,
+rx: `Prescription
+Metformin 500 mg — Take one tablet twice daily with meals.
+Quantity: 60 tablets.
+Refills: 2.`
+};
+
+const GLOSSARY = {
+"HDL": "HDL is often called 'good' cholesterol. It helps carry cholesterol away from the arteries and back to the liver. Higher HDL values are generally seen as favorable.",
+"LDL": "LDL is often called 'bad' cholesterol. It can build up in artery walls over time. Lower LDL values are generally seen as favorable.",
+"HbA1c": "HbA1c shows your average blood sugar over about the past 2 to 3 months. It is reported as a percentage.",
+"Hematocrit": "Hematocrit is the share of your blood made up of red blood cells. It is reported as a percentage.",
+"Hemoglobin": "Hemoglobin is the protein in red blood cells that carries oxygen around your body.",
+"Triglycerides": "Triglycerides are a type of fat in your blood. The body stores extra energy as triglycerides.",
+"Cholesterol": "Cholesterol is a waxy substance in your blood. Your body needs some, but high levels over time are linked to heart and artery problems.",
+"White Blood Cells": "White blood cells are part of your immune system. They help your body fight infections.",
+"Platelets": "Platelets are tiny blood cells that help your blood clot when you are injured.",
+"Fasting Glucose": "Fasting glucose is your blood sugar after not eating for several hours, usually overnight.",
+"Metformin": "Metformin is a medicine commonly prescribed for type 2 diabetes to help control blood sugar. Only take it exactly as written on your prescription label.",
+"mg/dL": "mg/dL means milligrams per deciliter — a unit that says how much of a substance is in a small amount of blood."
+};
+
+/* Plain-language explanations keyed by normalized test name. Educational only. */
+const EXPLAIN = {
+"total cholesterol": "Cholesterol is a waxy substance in your blood. A value above the typical range means there is more cholesterol circulating than is usually seen. It does not by itself mean you are ill — many factors matter, and your doctor can help you make sense of it.",
+"hdl cholesterol": "HDL is the 'good' cholesterol that helps carry cholesterol away from the arteries. A value below the typical range means there is less of this helpful type than usually seen.",
+"ldl cholesterol": "LDL is the 'bad' cholesterol that can build up in artery walls over time. A value above the typical range means there is more of it than usually seen.",
+"triglycerides": "Triglycerides are a type of fat in your blood. A value above the typical range means there is more of this fat circulating than usually seen.",
+"hemoglobin": "Hemoglobin carries oxygen around your body in red blood cells. A value within the typical range is what is usually seen in healthy adults.",
+"white blood cells": "White blood cells help your body fight infections. A value within the typical range is what is usually seen in healthy adults.",
+"platelets": "Platelets help your blood clot when you are injured. A value within the typical range is what is usually seen in healthy adults.",
+"hematocrit": "Hematocrit is the share of your blood made up of red blood cells. A value within the typical range is what is usually seen in healthy adults.",
+"hba1c": "HbA1c reflects average blood sugar over about 2 to 3 months. A value above the typical range means average blood sugar has been higher than usually seen. Only your doctor can say what it means for you.",
+"fasting glucose": "Fasting glucose is blood sugar after not eating for several hours. A value above the typical range means blood sugar was higher than usually seen at that moment."
+};
+
+const RX_EXPLAIN = {
+"medicine": "This line names a medicine and its strength. Take it exactly as written on your prescription label.",
+"how": "This line describes how the medicine is meant to be taken, as written on your prescription. If anything is unclear, ask your pharmacist or doctor.",
+"quantity": "This line says how much of the medicine was supplied.",
+"refills": "This line says how many times the prescription can be refilled without a new prescription."
+};
+
+/* ---------- Parser ---------- */
+function parseLine(raw) {
+  const line = raw.trim();
+  if (!line) return null;
+  // Skip headings (no colon/dash structure)
+  if (!/[0-9]/.test(line)) return { kind: "heading", text: line };
+  // Range pattern: "Name: 240 mg/dL (Reference: less than 200 mg/dL)" or "Name: 38 mg/dL (Reference: 40-60 mg/dL)"
+  const m = line.match(/^(.+?):\s*([\d.]+)\s*([A-Za-z0-9/%^³µ\- ]*?)\s*\(?\s*(?:Reference|Ref)\s*:\s*(.+?)\)?\s*$/i);
+  if (m) {
+    const name = m[1].trim();
+    const value = parseFloat(m[2]);
+    const unit = (m[3] || "").trim();
+    const refRaw = m[4].trim();
+    let low = null, high = null, refText = refRaw;
+    const rangeM = refRaw.match(/^([\d.]+)\s*[-–—]\s*([\d.]+)/);
+    const ltM = refRaw.match(/^(?:less than|below|under|<)\s*([\d.]+)/i);
+    const gtM = refRaw.match(/^(?:more than|above|over|>)\s*([\d.]+)/i);
+    if (rangeM) { low = parseFloat(rangeM[1]); high = parseFloat(rangeM[2]); }
+    else if (ltM) { high = parseFloat(ltM[1]); }
+    else if (gtM) { low = parseFloat(gtM[1]); }
+    else return { kind: "unknown", text: line };
+    let flag = "in";
+    if (low !== null && high !== null) { if (value < low) flag = "below"; else if (value > high) flag = "above"; }
+    else if (high !== null) { if (value >= high) flag = "above"; }
+    else if (low !== null) { if (value <= low) flag = "below"; }
+    return { kind: "value", name, value, unit, low, high, refText, flag };
+  }
+  // Prescription-style lines: "Metformin 500 mg — Take one tablet..." / "Quantity: 60 tablets." / "Refills: 2."
+  if (/refills?/i.test(line)) return { kind: "rx", rxKind: "refills", text: line };
+  if (/quantity/i.test(line)) return { kind: "rx", rxKind: "quantity", text: line };
+  if (/—|-|take/i.test(line) && /mg|tablet|capsule|ml|tablet/i.test(line)) return { kind: "rx", rxKind: "how", text: line };
+  if (/mg|tablet|capsule|ml/i.test(line) && /^[A-Za-z]/.test(line)) return { kind: "rx", rxKind: "medicine", text: line };
+  return { kind: "unknown", text: line };
+}
+
+function parseAll(text) {
+  const out = [], skipped = [];
+  for (const raw of text.split(/\n/)) {
+    const p = parseLine(raw);
+    if (!p) continue;
+    if (p.kind === "heading" || p.kind === "unknown") { if (p.kind === "unknown") skipped.push(p.text); continue; }
+    out.push(p);
+  }
+  return { items: out, skipped };
+}
+
+/* ---------- Glossary term linking ---------- */
+function glossHTML(text) {
+  let out = text;
+  const terms = Object.keys(GLOSSARY).sort((a, b) => b.length - a.length);
+  for (const t of terms) {
+    const re = new RegExp("\\b" + t.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "\\b", "g");
+    out = out.replace(re, `<button type="button" class="term" data-term="${t}">${t}</button>`);
+  }
+  return out;
+}
+function showDef(term) {
+  const box = document.getElementById("glossDef");
+  box.style.display = "block";
+  box.innerHTML = `<h4>${term}</h4><p>${GLOSSARY[term] || "No definition available."}</p>`;
+  box.scrollIntoView({ behavior: "smooth", block: "nearest" });
+}
+document.addEventListener("click", (e) => {
+  const b = e.target.closest(".term");
+  if (b) showDef(b.dataset.term);
+});
+const glossChips = document.getElementById("glossChips");
+for (const t of Object.keys(GLOSSARY)) {
+  const b = document.createElement("button");
+  b.type = "button"; b.className = "term"; b.dataset.term = t; b.textContent = t;
+  glossChips.appendChild(b);
+}
+/* ---------- Render ---------- */
+function flagMeta(flag) {
+  if (flag === "above") return { cls: "pill-above", label: "Above typical range" };
+  if (flag === "below") return { cls: "pill-below", label: "Below typical range" };
+  return { cls: "pill-in", label: "In typical range" };
+}
+function rangeBar(item) {
+  if (item.low === null && item.high === null) return "";
+  let lo, hi, zoneL, zoneW;
+  if (item.low !== null && item.high !== null) {
+    const span = item.high - item.low;
+    lo = Math.max(0, item.low - span * 0.6); hi = item.high + span * 0.6;
+    zoneL = ((item.low - lo) / (hi - lo)) * 100; zoneW = ((item.high - item.low) / (hi - lo)) * 100;
+  } else if (item.high !== null) {
+    lo = 0; hi = item.high * 1.6; zoneL = 0; zoneW = (item.high / hi) * 100;
+  } else {
+    lo = 0; hi = item.low * 2; zoneL = (item.low / hi) * 100; zoneW = 100 - zoneL;
+  }
+  const pos = Math.max(0, Math.min(100, ((item.value - lo) / (hi - lo)) * 100));
+  return `<div class="rangebar" role="img" aria-label="Value ${item.value} on a scale from ${lo} to ${hi}"><div class="zone" style="left:${zoneL}%;width:${zoneW}%"></div><div class="marker" style="left:${pos}%"></div></div><div class="range-labels"><span>${lo}</span><span>Typical range: ${item.refText}</span><span>${Math.round(hi * 10) / 10}</span></div>`;
+}
+function explainFor(item) {
+  const key = item.name.toLowerCase();
+  let base = EXPLAIN[key];
+  if (!base) {
+    base = item.flag === "above"
+      ? "This value is above the typical range shown. A single value does not tell the whole story — ask your doctor what it means for you."
+      : item.flag === "below"
+      ? "This value is below the typical range shown. A single value does not tell the whole story — ask your doctor what it means for you."
+      : "This value is within the typical range shown. Ranges are a guide, not a verdict — your doctor can put it in context.";
+  }
+  return base;
+}
+function render(items, skipped, aiMap) {
+  const sec = document.getElementById("results");
+  sec.style.display = "block";
+  const grid = document.getElementById("resultGrid");
+  grid.innerHTML = "";
+  for (const item of items) {
+    const div = document.createElement("div");
+    div.className = "result";
+    if (item.kind === "value") {
+      const fm = flagMeta(item.flag);
+      const expl = (aiMap && aiMap[item.name]) || explainFor(item);
+      div.innerHTML = `<div class="row" style="justify-content:space-between"><h3>${item.name}</h3><span class="pill ${fm.cls}">${fm.label}</span></div>
+        <div class="val">${item.value} ${item.unit}</div>
+        <div class="muted">Typical range: ${item.refText}</div>
+        ${rangeBar(item)}
+        <p class="mean"><strong>What this means:</strong> ${glossHTML(expl)}</p>`;
+    } else {
+      div.innerHTML = `<div class="row" style="justify-content:space-between"><h3>Prescription line</h3><span class="pill pill-in">Information</span></div>
+        <p style="margin:6px 0"><strong>${item.text}</strong></p>
+        <p class="mean">${RX_EXPLAIN[item.rxKind] || RX_EXPLAIN.medicine}</p>`;
+    }
+    grid.appendChild(div);
+  }
+  const sk = document.getElementById("skippedBox");
+  if (skipped.length) {
+    sk.style.display = "block";
+    sk.innerHTML = `<strong>We don't recognize these lines — they were skipped:</strong><ul>${skipped.map(s => `<li>${s.replace(/</g, "&lt;")}</li>`).join("")}</ul><p class="muted" style="margin:0">We never guess. If a line looks important, ask your doctor or pharmacist about it.</p>`;
+  } else sk.style.display = "none";
+  renderQuestions(items);
+  sec.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+function renderQuestions(items) {
+  const sec = document.getElementById("questions");
+  sec.style.display = "block";
+  const flagged = items.filter(i => i.kind === "value" && i.flag !== "in");
+  let qs;
+  if (flagged.length) {
+    const f = flagged[0];
+    const dir = f.flag === "above" ? "above" : "below";
+    qs = [
+      `My ${f.name} is ${dir} the typical range shown — what does that mean for me, and what should we discuss next?`,
+      "Should this test be repeated, and if so, when?",
+      "Are there lifestyle or follow-up topics I should ask about?"
+    ];
+  } else {
+    qs = [
+      "The values shown are within the typical ranges — is there anything else I should ask about?",
+      "How often should I repeat this test?",
+      "Are there other tests worth discussing at this visit?"
+    ];
+  }
+  document.getElementById("qList").innerHTML = qs.map((q, i) => `<div class="q"><strong>Q${i + 1}.</strong> ${q}</div>`).join("");
+  document.getElementById("copyQ").onclick = async () => {
+    const text = qs.map((q, i) => `Q${i + 1}. ${q}`).join("\n");
+    try { await navigator.clipboard.writeText(text); }
+    catch (e) { const ta = document.createElement("textarea"); ta.value = text; document.body.appendChild(ta); ta.select(); document.execCommand("copy"); ta.remove(); }
+    document.getElementById("copyMsg").textContent = "Copied.";
+    setTimeout(() => document.getElementById("copyMsg").textContent = "", 2500);
+  };
+}
+
+/* ---------- Gemini (optional, localStorage only) ---------- */
+function getKey() { try { return localStorage.getItem("medplain_gemini_key") || ""; } catch (e) { return ""; } }
+function refreshBadge(ai) {
+  const b = document.getElementById("modeBadge");
+  if (ai) { b.className = "badge badge-ai"; b.textContent = "AI explanation · Gemini"; }
+  else { b.className = "badge badge-demo"; b.textContent = "Demo parsing · built-in rules"; }
+}
+async function geminiExplain(items, key) {
+  const lines = items.filter(i => i.kind === "value").map(i => `${i.name}: ${i.value} ${i.unit} (typical range: ${i.refText})`).join("\n");
+  const prompt = "Explain each of these lab lines in plain, simple English, one or two sentences each. Educational information only. Do NOT name any condition. Do NOT give treatment advice. Do NOT say what condition anyone has. For each line, say whether the value is within, above, or below the typical range and what that means in general terms. Return JSON: {\"explanations\": {\"<exact test name>\": \"...\"}}. Lines:\n" + lines;
+  const res = await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=" + encodeURIComponent(key), {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }], generationConfig: { responseMimeType: "application/json" } })
+  });
+  if (!res.ok) throw new Error("Gemini request failed");
+  const data = await res.json();
+  const raw = data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts && data.candidates[0].content.parts[0] && data.candidates[0].content.parts[0].text;
+  const parsed = JSON.parse(raw || "{}");
+  return parsed.explanations || {};
+}
+
+/* ---------- Events ---------- */
+document.querySelectorAll("[data-sample]").forEach(btn => {
+  btn.addEventListener("click", () => { document.getElementById("input").value = SAMPLES[btn.dataset.sample]; });
+});
+document.getElementById("clear").addEventListener("click", () => {
+  document.getElementById("input").value = "";
+  document.getElementById("results").style.display = "none";
+  document.getElementById("questions").style.display = "none";
+});
+document.getElementById("saveKey").addEventListener("click", () => {
+  const v = document.getElementById("geminiKey").value.trim();
+  if (!v) return;
+  try { localStorage.setItem("medplain_gemini_key", v); } catch (e) {}
+  document.getElementById("geminiKey").value = "";
+  document.getElementById("modeBadge").textContent = "Gemini key saved — next explanation will use AI";
+});
+document.getElementById("dropKey").addEventListener("click", () => {
+  try { localStorage.removeItem("medplain_gemini_key"); } catch (e) {}
+  refreshBadge(false);
+});
+document.getElementById("explain").addEventListener("click", async () => {
+  const text = document.getElementById("input").value.trim();
+  if (!text) { alert("Paste a lab result first, or tap a sample."); return; }
+  const { items, skipped } = parseAll(text);
+  if (!items.length) {
+    document.getElementById("results").style.display = "block";
+    document.getElementById("resultGrid").innerHTML = "<p>No lines were recognized. Try one of the samples, or paste lines like: <em>Total Cholesterol: 240 mg/dL (Reference: less than 200 mg/dL)</em></p>";
+    document.getElementById("skippedBox").style.display = "none";
+    document.getElementById("questions").style.display = "none";
+    return;
+  }
+  let aiMap = null;
+  const key = getKey();
+  if (key && items.some(i => i.kind === "value")) {
+    try { aiMap = await geminiExplain(items, key); refreshBadge(true); }
+    catch (e) { refreshBadge(false); }
+  } else refreshBadge(false);
+  render(items, skipped, aiMap);
+});
+if (getKey()) document.getElementById("modeBadge").textContent = "Gemini key saved — AI explanations on";
+</script>
+</body>
+</html>
