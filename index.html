@@ -167,7 +167,7 @@ const GLOSSARY = {
 "White Blood Cells": "White blood cells are part of your immune system. They help your body fight infections.",
 "Platelets": "Platelets are tiny blood cells that help your blood clot when you are injured.",
 "Fasting Glucose": "Fasting glucose is your blood sugar after not eating for several hours, usually overnight.",
-"Metformin": "Metformin is a medicine commonly prescribed for type 2 diabetes to help control blood sugar. Only take it exactly as written on your prescription label.",
+"Metformin": "Metformin is a medicine commonly prescribed for type 2 diabetes to help control blood sugar. Your prescription label has the instructions for it — if anything is unclear, ask your pharmacist or doctor.",
 "mg/dL": "mg/dL means milligrams per deciliter — a unit that says how much of a substance is in a small amount of blood."
 };
 
@@ -186,8 +186,8 @@ const EXPLAIN = {
 };
 
 const RX_EXPLAIN = {
-"medicine": "This line names a medicine and its strength. Take it exactly as written on your prescription label.",
-"how": "This line describes how the medicine is meant to be taken, as written on your prescription. If anything is unclear, ask your pharmacist or doctor.",
+"medicine": "This line names a medicine and its strength. The instructions are on your prescription label — if anything is unclear, ask your pharmacist or doctor.",
+"how": "This line describes the instructions written on your prescription. If anything is unclear, ask your pharmacist or doctor.",
 "quantity": "This line says how much of the medicine was supplied.",
 "refills": "This line says how many times the prescription can be refilled without a new prescription."
 };
@@ -196,8 +196,13 @@ const RX_EXPLAIN = {
 function parseLine(raw) {
   const line = raw.trim();
   if (!line) return null;
-  // Skip headings (no colon/dash structure)
-  if (!/[0-9]/.test(line)) return { kind: "heading", text: line };
+  // Skip headings (no colon/dash structure). A line WITH a colon but no
+  // digits (e.g. "Total Cholesterol:") is a broken value line, not a
+  // heading — surface it as unknown so the user sees it was skipped.
+  if (!/[0-9]/.test(line)) {
+    if (line.includes(":")) return { kind: "unknown", text: line };
+    return { kind: "heading", text: line };
+  }
   // Range pattern: "Name: 240 mg/dL (Reference: less than 200 mg/dL)" or "Name: 38 mg/dL (Reference: 40-60 mg/dL)"
   const m = line.match(/^(.+?):\s*([\d.]+)\s*([A-Za-z0-9/%^³µ\- ]*?)\s*\(?\s*(?:Reference|Ref)\s*:\s*(.+?)\)?\s*$/i);
   if (m) {
@@ -239,6 +244,11 @@ function parseAll(text) {
 }
 
 /* ---------- Glossary term linking ---------- */
+/* Escape user-controlled text before it goes into innerHTML (self-XSS guard:
+   pasted lab lines must never be parsed as HTML). */
+function esc(s) {
+  return String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+}
 function glossHTML(text) {
   let out = text;
   const terms = Object.keys(GLOSSARY).sort((a, b) => b.length - a.length);
@@ -274,7 +284,8 @@ function rangeBar(item) {
   if (item.low === null && item.high === null) return "";
   let lo, hi, zoneL, zoneW;
   if (item.low !== null && item.high !== null) {
-    const span = item.high - item.low;
+    let span = item.high - item.low;
+    if (!(span > 0)) span = Math.max(1, Math.abs(item.low) * 0.2); // single-point range (e.g. 5-5): avoid NaN
     lo = Math.max(0, item.low - span * 0.6); hi = item.high + span * 0.6;
     zoneL = ((item.low - lo) / (hi - lo)) * 100; zoneW = ((item.high - item.low) / (hi - lo)) * 100;
   } else if (item.high !== null) {
@@ -283,7 +294,7 @@ function rangeBar(item) {
     lo = 0; hi = item.low * 2; zoneL = (item.low / hi) * 100; zoneW = 100 - zoneL;
   }
   const pos = Math.max(0, Math.min(100, ((item.value - lo) / (hi - lo)) * 100));
-  return `<div class="rangebar" role="img" aria-label="Value ${item.value} on a scale from ${lo} to ${hi}"><div class="zone" style="left:${zoneL}%;width:${zoneW}%"></div><div class="marker" style="left:${pos}%"></div></div><div class="range-labels"><span>${lo}</span><span>Typical range: ${item.refText}</span><span>${Math.round(hi * 10) / 10}</span></div>`;
+  return `<div class="rangebar" role="img" aria-label="Value ${item.value} on a scale from ${lo} to ${hi}"><div class="zone" style="left:${zoneL}%;width:${zoneW}%"></div><div class="marker" style="left:${pos}%"></div></div><div class="range-labels"><span>${lo}</span><span>Typical range: ${esc(item.refText)}</span><span>${Math.round(hi * 10) / 10}</span></div>`;
 }
 function explainFor(item) {
   const key = item.name.toLowerCase();
@@ -308,14 +319,14 @@ function render(items, skipped, aiMap) {
     if (item.kind === "value") {
       const fm = flagMeta(item.flag);
       const expl = (aiMap && aiMap[item.name]) || explainFor(item);
-      div.innerHTML = `<div class="row" style="justify-content:space-between"><h3>${item.name}</h3><span class="pill ${fm.cls}">${fm.label}</span></div>
-        <div class="val">${item.value} ${item.unit}</div>
-        <div class="muted">Typical range: ${item.refText}</div>
+      div.innerHTML = `<div class="row" style="justify-content:space-between"><h3>${esc(item.name)}</h3><span class="pill ${fm.cls}">${fm.label}</span></div>
+        <div class="val">${item.value} ${esc(item.unit)}</div>
+        <div class="muted">Typical range: ${esc(item.refText)}</div>
         ${rangeBar(item)}
-        <p class="mean"><strong>What this means:</strong> ${glossHTML(expl)}</p>`;
+        <p class="mean"><strong>What this means:</strong> ${glossHTML(esc(expl))}</p>`;
     } else {
       div.innerHTML = `<div class="row" style="justify-content:space-between"><h3>Prescription line</h3><span class="pill pill-in">Information</span></div>
-        <p style="margin:6px 0"><strong>${item.text}</strong></p>
+        <p style="margin:6px 0"><strong>${esc(item.text)}</strong></p>
         <p class="mean">${RX_EXPLAIN[item.rxKind] || RX_EXPLAIN.medicine}</p>`;
     }
     grid.appendChild(div);
@@ -323,7 +334,7 @@ function render(items, skipped, aiMap) {
   const sk = document.getElementById("skippedBox");
   if (skipped.length) {
     sk.style.display = "block";
-    sk.innerHTML = `<strong>We don't recognize these lines — they were skipped:</strong><ul>${skipped.map(s => `<li>${s.replace(/</g, "&lt;")}</li>`).join("")}</ul><p class="muted" style="margin:0">We never guess. If a line looks important, ask your doctor or pharmacist about it.</p>`;
+    sk.innerHTML = `<strong>We don't recognize these lines — they were skipped:</strong><ul>${skipped.map(s => `<li>${esc(s)}</li>`).join("")}</ul><p class="muted" style="margin:0">We never guess. If a line looks important, ask your doctor or pharmacist about it.</p>`;
   } else sk.style.display = "none";
   renderQuestions(items);
   sec.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -348,13 +359,23 @@ function renderQuestions(items) {
       "Are there other tests worth discussing at this visit?"
     ];
   }
-  document.getElementById("qList").innerHTML = qs.map((q, i) => `<div class="q"><strong>Q${i + 1}.</strong> ${q}</div>`).join("");
+  document.getElementById("qList").innerHTML = qs.map((q, i) => `<div class="q"><strong>Q${i + 1}.</strong> ${esc(q)}</div>`).join("");
   document.getElementById("copyQ").onclick = async () => {
     const text = qs.map((q, i) => `Q${i + 1}. ${q}`).join("\n");
-    try { await navigator.clipboard.writeText(text); }
-    catch (e) { const ta = document.createElement("textarea"); ta.value = text; document.body.appendChild(ta); ta.select(); document.execCommand("copy"); ta.remove(); }
-    document.getElementById("copyMsg").textContent = "Copied.";
-    setTimeout(() => document.getElementById("copyMsg").textContent = "", 2500);
+    let ok = false;
+    try { await navigator.clipboard.writeText(text); ok = true; }
+    catch (e) {
+      try {
+        const ta = document.createElement("textarea"); ta.value = text;
+        document.body.appendChild(ta); ta.select();
+        ok = document.execCommand("copy");
+        ta.remove();
+      } catch (e2) { ok = false; }
+    }
+    document.getElementById("copyMsg").textContent = ok
+      ? "Copied."
+      : "Couldn't copy automatically — please select the questions and copy them manually.";
+    setTimeout(() => document.getElementById("copyMsg").textContent = "", 4000);
   };
 }
 
@@ -401,12 +422,22 @@ document.getElementById("dropKey").addEventListener("click", () => {
 });
 document.getElementById("explain").addEventListener("click", async () => {
   const text = document.getElementById("input").value.trim();
-  if (!text) { alert("Paste a lab result first, or tap a sample."); return; }
+  if (!text) {
+    document.getElementById("results").style.display = "block";
+    document.getElementById("resultGrid").innerHTML = "<p>Paste a lab result first, or tap a sample.</p>";
+    document.getElementById("skippedBox").style.display = "none";
+    document.getElementById("questions").style.display = "none";
+    return;
+  }
   const { items, skipped } = parseAll(text);
   if (!items.length) {
     document.getElementById("results").style.display = "block";
     document.getElementById("resultGrid").innerHTML = "<p>No lines were recognized. Try one of the samples, or paste lines like: <em>Total Cholesterol: 240 mg/dL (Reference: less than 200 mg/dL)</em></p>";
-    document.getElementById("skippedBox").style.display = "none";
+    const sk = document.getElementById("skippedBox");
+    if (skipped.length) {
+      sk.style.display = "block";
+      sk.innerHTML = `<strong>We don't recognize these lines — they were skipped:</strong><ul>${skipped.map(s => `<li>${esc(s)}</li>`).join("")}</ul><p class="muted" style="margin:0">We never guess. If a line looks important, ask your doctor or pharmacist about it.</p>`;
+    } else sk.style.display = "none";
     document.getElementById("questions").style.display = "none";
     return;
   }

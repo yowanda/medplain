@@ -1,0 +1,6 @@
+# Local artifacts — never committed
+cover.png
+*.png
+*.log
+*.tmp
+.DS_Store

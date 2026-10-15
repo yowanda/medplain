@@ -39,4 +39,5 @@ https://yowanda.github.io/medplain/
 ## Privacy
 
 No user data leaves the browser except the optional Gemini request. No
-tracking, no account.
+tracking, no account. Pasted text is escaped before display, so pasted
+content is never executed as code.
